@@ -1,7 +1,7 @@
-# =============================================================================
+
 #  LONG-TERM STOCK PRICE FORECASTING USING TRANSFORMER ARCHITECTURE
 #  Final Semester CS Project - Accurate Version with Technical Indicators
-# =============================================================================
+
 
 import os
 import math
