@@ -1,7 +1,6 @@
 # =============================================================================
 #  LONG-TERM STOCK PRICE FORECASTING USING TRANSFORMER ARCHITECTURE
-#  Final Semester CS Project
-#  Supports multiple companies with case-insensitive name input
+#  Final Semester CS Project - Accurate Version with Technical Indicators
 # =============================================================================
 
 import os
@@ -24,171 +23,29 @@ warnings.filterwarnings("ignore")
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# =============================================================================
-#  COMPANY NAME -> TICKER MAPPING
-#  Supports any variation of spelling/case e.g. apple, Apple, APPLE, aapl
-# =============================================================================
-COMPANY_MAP = {
-    # Apple
-    "apple": "AAPL", "aapl": "AAPL",
-
-    # NVIDIA
-    "nvidia": "NVDA", "nvda": "NVDA", "nvdia": "NVDA",
-
-    # Microsoft
-    "microsoft": "MSFT", "msft": "MSFT",
-
-    # Google / Alphabet
-    "google": "GOOGL", "alphabet": "GOOGL", "googl": "GOOGL", "goog": "GOOGL",
-
-    # Amazon
-    "amazon": "AMZN", "amzn": "AMZN",
-
-    # Meta / Facebook
-    "meta": "META", "facebook": "META", "fb": "META",
-
-    # Tesla
-    "tesla": "TSLA", "tsla": "TSLA",
-
-    # Samsung
-    "samsung": "005930.KS",
-
-    # Netflix
-    "netflix": "NFLX", "nflx": "NFLX",
-
-    # Intel
-    "intel": "INTC", "intc": "INTC",
-
-    # AMD
-    "amd": "AMD", "advanced micro devices": "AMD",
-
-    # Qualcomm
-    "qualcomm": "QCOM", "qcom": "QCOM",
-
-    # IBM
-    "ibm": "IBM",
-
-    # Oracle
-    "oracle": "ORCL", "orcl": "ORCL",
-
-    # Salesforce
-    "salesforce": "CRM", "crm": "CRM",
-
-    # PayPal
-    "paypal": "PYPL", "pypl": "PYPL",
-
-    # Uber
-    "uber": "UBER",
-
-    # Twitter / X
-    "twitter": "TWTR", "x": "TWTR",
-
-    # Spotify
-    "spotify": "SPOT", "spot": "SPOT",
-
-    # Zoom
-    "zoom": "ZM", "zm": "ZM",
-
-    # Infosys
-    "infosys": "INFY", "infy": "INFY",
-
-    # TCS (Tata Consultancy Services)
-    "tcs": "TCS.NS", "tata consultancy": "TCS.NS",
-
-    # Wipro
-    "wipro": "WIPRO.NS",
-
-    # Reliance
-    "reliance": "RELIANCE.NS",
-
-    # HDFC Bank
-    "hdfc": "HDFCBANK.NS", "hdfc bank": "HDFCBANK.NS",
-}
-
-def resolve_ticker(user_input: str) -> str:
-    """
-    Converts any company name or ticker (any case) to the correct ticker symbol.
-    Examples:
-        'apple'  -> 'AAPL'
-        'APPLE'  -> 'AAPL'
-        'Apple'  -> 'AAPL'
-        'NVDA'   -> 'NVDA'
-        'nvidia' -> 'NVDA'
-    """
-    cleaned = user_input.strip().lower()   # normalize to lowercase
-
-    if cleaned in COMPANY_MAP:
-        ticker = COMPANY_MAP[cleaned]
-        return ticker
-    else:
-        ticker = user_input.strip().upper()
-        return ticker
-
-
-def get_user_input() -> dict:
-    """
-    Interactively ask the user which company and date range to use.
-    User only needs to type the company name - no ticker knowledge needed.
-    """
-    print("\n" + "=" * 60)
-    print("   STOCK PRICE FORECASTING - TRANSFORMER MODEL")
-    print("=" * 60)
-    print("\nYou can type the company name in ANY way:")
-    print("  'apple' or 'Apple' or 'APPLE' -> all work the same!")
-    print("\nSupported companies:")
-    print("  Apple, NVIDIA, Microsoft, Google, Amazon, Meta,")
-    print("  Tesla, Netflix, Intel, AMD, IBM, Oracle, Uber,")
-    print("  Zoom, Spotify, PayPal, Qualcomm, Salesforce,")
-    print("  Infosys, TCS, Wipro, Reliance, HDFC Bank\n")
-
-    company_input = input("Which company do you want to predict? : ").strip()
-
-    # Show error and re-ask if user types nothing
-    while not company_input:
-        print("[!] Please type a company name.")
-        company_input = input("Which company do you want to predict? : ").strip()
-
-    ticker = resolve_ticker(company_input)
-
-    print(f"\nGreat! We will predict stock prices for: {company_input.title()}")
-    print(f"Using dates: 2018-01-01 to 2024-12-31 (default)\n")
-
-    change_dates = input("Do you want to change the date range? (yes/no) [default: no]: ").strip().lower()
-
-    if change_dates in ("yes", "y"):
-        start_date = input("  Enter start date (YYYY-MM-DD): ").strip()
-        if not start_date:
-            start_date = "2018-01-01"
-        end_date = input("  Enter end date   (YYYY-MM-DD): ").strip()
-        if not end_date:
-            end_date = "2024-12-31"
-    else:
-        start_date = "2018-01-01"
-        end_date   = "2024-12-31"
-
-    return {"ticker": ticker, "start_date": start_date, "end_date": end_date}
-
 
 # =============================================================================
-#  SECTION 0 - GLOBAL CONFIGURATION
+#  CONFIGURATION
 # =============================================================================
-def build_config(ticker, start_date, end_date) -> dict:
+def build_config(ticker):
     return {
-        "ticker":           ticker,
-        "start_date":       start_date,
-        "end_date":         end_date,
+        "ticker":           ticker.upper(),
+        "start_date":       "2018-01-01",
+        "end_date":         "2024-12-31",
         "target_col":       "Close",
         "lookback":         60,
         "forecast_horizon": 1,
         "train_ratio":      0.80,
 
-        "d_model":          64,
-        "nhead":            4,
-        "num_layers":       2,
-        "dim_feedforward":  128,
+        # Bigger model = more accurate
+        "d_model":          128,
+        "nhead":            8,
+        "num_layers":       3,
+        "dim_feedforward":  256,
         "dropout":          0.1,
 
-        "epochs":           50,
+        # More epochs = better learning
+        "epochs":           100,
         "batch_size":       32,
         "learning_rate":    1e-3,
 
@@ -197,21 +54,61 @@ def build_config(ticker, start_date, end_date) -> dict:
 
 
 # =============================================================================
-#  SECTION 1 - DATA LOADING
+#  STEP 1 - ASK FOR TICKER
+# =============================================================================
+def get_ticker():
+    print("\n" + "=" * 60)
+    print("   STOCK PRICE FORECASTING - TRANSFORMER MODEL")
+    print("=" * 60)
+    print("\n  Example tickers:")
+    print("  AAPL        -> Apple")
+    print("  NVDA        -> NVIDIA")
+    print("  MSFT        -> Microsoft")
+    print("  TSLA        -> Tesla")
+    print("  GOOGL       -> Google")
+    print("  AMZN        -> Amazon")
+    print("  TCS.NS      -> TCS (India)")
+    print("  INFY        -> Infosys")
+    print("  RELIANCE.NS -> Reliance (India)")
+    print("\n  Find any ticker at: finance.yahoo.com\n")
+
+    ticker = input("  Enter ticker: ").strip().upper()
+    while not ticker:
+        print("  [!] Cannot be empty. Try again.")
+        ticker = input("  Enter ticker: ").strip().upper()
+    return ticker
+
+
+# =============================================================================
+#  STEP 2 - DOWNLOAD DATA
 # =============================================================================
 def load_stock_data(ticker, start, end):
     try:
         import yfinance as yf
     except ImportError:
-        raise ImportError("Run:  pip install yfinance")
+        raise ImportError("Run: pip install yfinance")
 
-    print(f"\n[DATA]  Downloading {ticker} from {start} to {end} ...")
-    df = yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False)
+    print(f"\n[DATA]  Downloading {ticker} ...")
 
-    if df.empty:
+    # Try up to 3 times - yfinance sometimes fails on first attempt
+    df = None
+    for attempt in range(1, 4):
+        try:
+            df = yf.download(ticker, start=start, end=end,
+                             auto_adjust=True, progress=False, timeout=30)
+            if df is not None and not df.empty:
+                break
+            print(f"[DATA]  Attempt {attempt} returned empty. Retrying ...")
+        except Exception as e:
+            print(f"[DATA]  Attempt {attempt} failed ({e}). Retrying ...")
+
+    if df is None or df.empty:
         raise ValueError(
-            f"No data found for '{ticker}'.\n"
-            f"Check the ticker is correct at finance.yahoo.com"
+            f"No data found for '{ticker}' after 3 attempts.\n"
+            f"  Fixes:\n"
+            f"  1. Run: pip install --upgrade yfinance\n"
+            f"  2. Check ticker at finance.yahoo.com\n"
+            f"  3. Wait a few seconds and try again"
         )
 
     df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
@@ -221,29 +118,96 @@ def load_stock_data(ticker, start, end):
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [col[0] for col in df.columns]
 
-    print(f"[DATA]  Loaded {len(df)} trading days  |  "
-          f"{df.index[0].date()} to {df.index[-1].date()}")
+    print(f"[DATA]  {len(df)} trading days  "
+          f"({df.index[0].date()} to {df.index[-1].date()})")
     return df
 
 
 # =============================================================================
-#  SECTION 2 - PREPROCESSING
+#  STEP 3 - TECHNICAL INDICATORS
+#  These extra features make the model learn company-specific patterns
+# =============================================================================
+def add_technical_indicators(df):
+    """
+    Adds 12 technical indicators to raw OHLCV data.
+    Each indicator captures a different behaviour of the stock:
+
+    MA7, MA21     - Short & medium term price trends
+    MA50          - Long term trend
+    EMA12, EMA26  - Exponential moving averages (more weight on recent data)
+    MACD          - Momentum: difference between EMA12 and EMA26
+    RSI           - Relative Strength Index: measures overbought/oversold (0-100)
+    BB_upper      - Bollinger Band upper: price + 2 standard deviations
+    BB_lower      - Bollinger Band lower: price - 2 standard deviations
+    BB_width      - Width between bands: measures volatility
+    Volatility    - 10-day rolling standard deviation of returns
+    Return_1d     - Daily percentage return
+    """
+    close = df["Close"]
+    high  = df["High"]
+    low   = df["Low"]
+
+    # Moving Averages
+    df["MA7"]   = close.rolling(window=7).mean()
+    df["MA21"]  = close.rolling(window=21).mean()
+    df["MA50"]  = close.rolling(window=50).mean()
+
+    # Exponential Moving Averages
+    df["EMA12"] = close.ewm(span=12, adjust=False).mean()
+    df["EMA26"] = close.ewm(span=26, adjust=False).mean()
+
+    # MACD (Moving Average Convergence Divergence)
+    df["MACD"]  = df["EMA12"] - df["EMA26"]
+
+    # RSI (Relative Strength Index)
+    delta       = close.diff()
+    gain        = delta.clip(lower=0).rolling(window=14).mean()
+    loss        = (-delta.clip(upper=0)).rolling(window=14).mean()
+    rs          = gain / (loss + 1e-9)
+    df["RSI"]   = 100 - (100 / (1 + rs))
+
+    # Bollinger Bands
+    rolling_mean     = close.rolling(window=20).mean()
+    rolling_std      = close.rolling(window=20).std()
+    df["BB_upper"]   = rolling_mean + 2 * rolling_std
+    df["BB_lower"]   = rolling_mean - 2 * rolling_std
+    df["BB_width"]   = df["BB_upper"] - df["BB_lower"]
+
+    # Volatility (10-day rolling std of daily returns)
+    df["Volatility"] = close.pct_change().rolling(window=10).std()
+
+    # Daily Return
+    df["Return_1d"]  = close.pct_change()
+
+    # Drop rows with NaN (from rolling calculations)
+    df.dropna(inplace=True)
+
+    print(f"[FEAT]  Added technical indicators  |  "
+          f"Total features: {len(df.columns)}  |  Rows after cleaning: {len(df)}")
+    return df
+
+
+# =============================================================================
+#  STEP 4 - PREPROCESS (Normalize 0 to 1)
 # =============================================================================
 def preprocess(df, target_col="Close"):
     df = df.dropna()
-    feature_cols = ["Open", "High", "Low", "Close", "Volume"]
+
+    # All columns become features
+    feature_cols = df.columns.tolist()
     data         = df[feature_cols].values.astype(np.float32)
 
     scaler      = MinMaxScaler(feature_range=(0, 1))
     data_scaled = scaler.fit_transform(data)
     target_idx  = feature_cols.index(target_col)
 
-    print(f"[PREP]  Normalized {len(data)} rows  |  Target: {target_col} (index {target_idx})")
-    return data_scaled, scaler, target_idx, df.index
+    print(f"[PREP]  Normalized {len(data)} rows  |  "
+          f"{len(feature_cols)} features  |  Target: {target_col} (col {target_idx})")
+    return data_scaled, scaler, target_idx, df.index, len(feature_cols)
 
 
 # =============================================================================
-#  SECTION 3 - SLIDING WINDOW
+#  STEP 5 - SLIDING WINDOW
 # =============================================================================
 def create_sequences(data, lookback, target_idx, horizon=1):
     X, y = [], []
@@ -252,12 +216,12 @@ def create_sequences(data, lookback, target_idx, horizon=1):
         y.append(data[i + lookback + horizon - 1, target_idx])
     X = np.array(X, dtype=np.float32)
     y = np.array(y, dtype=np.float32)
-    print(f"[SEQ]   Created {len(X)} sequences  |  X: {X.shape}  y: {y.shape}")
+    print(f"[SEQ]   {len(X)} sequences  |  Shape: {X.shape}")
     return X, y
 
 
 # =============================================================================
-#  SECTION 4 - PYTORCH DATASET
+#  STEP 6 - PYTORCH DATASET
 # =============================================================================
 class StockDataset(Dataset):
     def __init__(self, X, y):
@@ -272,7 +236,7 @@ class StockDataset(Dataset):
 
 
 # =============================================================================
-#  SECTION 5 - POSITIONAL ENCODING
+#  STEP 7 - POSITIONAL ENCODING
 # =============================================================================
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=500, dropout=0.1):
@@ -293,7 +257,7 @@ class PositionalEncoding(nn.Module):
 
 
 # =============================================================================
-#  SECTION 6 - TRANSFORMER MODEL
+#  STEP 8 - TRANSFORMER MODEL
 # =============================================================================
 class StockTransformer(nn.Module):
     def __init__(self, num_features, d_model, nhead, num_layers,
@@ -307,9 +271,16 @@ class StockTransformer(nn.Module):
             dim_feedforward=dim_feedforward,
             dropout=dropout, batch_first=True
         )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer,
-                                                         num_layers=num_layers)
-        self.output_head = nn.Linear(d_model, 1)
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers=num_layers
+        )
+        # Deeper output head for better accuracy
+        self.output_head = nn.Sequential(
+            nn.Linear(d_model, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, x):
         x = self.input_proj(x)
@@ -320,20 +291,28 @@ class StockTransformer(nn.Module):
 
 
 # =============================================================================
-#  SECTION 7 - TRAINING
+#  STEP 9 - TRAINING
 # =============================================================================
 def train_model(model, train_loader, val_loader, cfg):
     device    = cfg["device"]
     model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg["learning_rate"])
-    criterion = nn.MSELoss()
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, patience=5, factor=0.5
+    optimizer = torch.optim.Adam(model.parameters(),
+                                  lr=cfg["learning_rate"], weight_decay=1e-5)
+    criterion = nn.HuberLoss()      # More robust than MSE - less sensitive to outliers
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=cfg["epochs"]  # Smoothly reduces LR over all epochs
     )
+
     train_losses, val_losses = [], []
+    best_val_loss  = float("inf")
+    best_weights   = None
+    patience_count = 0
+    patience_limit = 15   # Stop early if no improvement for 15 epochs
+
     print(f"\n[TRAIN] Starting {cfg['epochs']} epochs on {device} ...")
 
     for epoch in range(1, cfg["epochs"] + 1):
+        # Training
         model.train()
         batch_losses = []
         for xb, yb in train_loader:
@@ -346,6 +325,7 @@ def train_model(model, train_loader, val_loader, cfg):
             batch_losses.append(loss.item())
         train_loss = np.mean(batch_losses)
 
+        # Validation
         model.eval()
         val_batch = []
         with torch.no_grad():
@@ -356,18 +336,36 @@ def train_model(model, train_loader, val_loader, cfg):
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-        scheduler.step(val_loss)
+        scheduler.step()
+
+        # Save best model weights
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_weights  = {k: v.clone() for k, v in model.state_dict().items()}
+            patience_count = 0
+        else:
+            patience_count += 1
 
         if epoch % 10 == 0 or epoch == 1:
             print(f"  Epoch {epoch:>3}/{cfg['epochs']}  |  "
-                  f"Train: {train_loss:.6f}  |  Val: {val_loss:.6f}")
+                  f"Train: {train_loss:.6f}  |  "
+                  f"Val: {val_loss:.6f}  |  "
+                  f"Best: {best_val_loss:.6f}")
 
-    print("[TRAIN] Done.")
+        # Early stopping
+        if patience_count >= patience_limit:
+            print(f"\n[TRAIN] Early stopping at epoch {epoch} "
+                  f"(no improvement for {patience_limit} epochs)")
+            break
+
+    # Load best weights before returning
+    model.load_state_dict(best_weights)
+    print("[TRAIN] Done. Best model weights restored.")
     return train_losses, val_losses
 
 
 # =============================================================================
-#  SECTION 8 - METRICS
+#  STEP 10 - METRICS
 # =============================================================================
 def evaluate_metrics(y_true, y_pred):
     mae  = mean_absolute_error(y_true, y_pred)
@@ -377,14 +375,14 @@ def evaluate_metrics(y_true, y_pred):
 
     metrics = {"MAE": mae, "RMSE": rmse, "MAPE (%)": mape}
     print("\n[METRICS]  Test Set Results:")
-    print(f"   MAE   = ${mae:.4f}")
-    print(f"   RMSE  = ${rmse:.4f}")
-    print(f"   MAPE  = {mape:.4f}%")
+    print(f"   MAE   = ${mae:.4f}  (avg dollar error)")
+    print(f"   RMSE  = ${rmse:.4f}  (penalizes large errors)")
+    print(f"   MAPE  = {mape:.4f}%  (percentage error)")
     return metrics
 
 
 # =============================================================================
-#  SECTION 9 - INFERENCE
+#  STEP 11 - INFERENCE
 # =============================================================================
 def get_predictions(model, loader, device):
     model.eval()
@@ -403,32 +401,42 @@ def inverse_transform_target(scaled_values, scaler, target_idx, num_features):
 
 
 # =============================================================================
-#  SECTION 10 - VISUALIZATIONS
+#  STEP 12 - VISUALIZATIONS (saved with ticker name - unique per company)
 # =============================================================================
 def plot_loss_curves(train_losses, val_losses, ticker):
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(train_losses, label="Train Loss", color="#2196F3", linewidth=2)
-    ax.plot(val_losses,   label="Val Loss",   color="#FF5722", linewidth=2, linestyle="--")
-    ax.set_title(f"{ticker} - Training & Validation Loss", fontsize=14, fontweight="bold")
+    ax.plot(val_losses,   label="Val Loss",   color="#FF5722",
+            linewidth=2, linestyle="--")
+    ax.set_title(f"{ticker} - Training & Validation Loss",
+                 fontsize=14, fontweight="bold")
     ax.set_xlabel("Epoch")
-    ax.set_ylabel("MSE Loss")
+    ax.set_ylabel("Huber Loss")
     ax.legend()
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     path = os.path.join(OUTPUT_DIR, f"{ticker}_loss_curves.png")
     plt.savefig(path, dpi=150)
     plt.close()
-    print(f"[PLOT]  Saved: {path}")
+    print(f"[PLOT]  Saved -> {path}")
 
 
 def plot_actual_vs_predicted(dates, actual, predicted, ticker, metrics):
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.plot(dates, actual,    label="Actual Price",    color="#1565C0", linewidth=1.5)
-    ax.plot(dates, predicted, label="Predicted Price", color="#E53935",
-            linewidth=1.5, linestyle="--", alpha=0.85)
+    ax.plot(dates, actual,    label="Actual Price",
+            color="#1565C0", linewidth=1.5)
+    ax.plot(dates, predicted, label="Predicted Price",
+            color="#E53935",  linewidth=1.5, linestyle="--", alpha=0.9)
+
+    ax.fill_between(dates, actual, predicted,
+                    alpha=0.08, color="purple",
+                    label="Prediction Error")
+
     ax.set_title(
-        f"{ticker} - Actual vs Predicted  "
-        f"(MAE=${metrics['MAE']:.2f}  RMSE=${metrics['RMSE']:.2f}  MAPE={metrics['MAPE (%)']:.2f}%)",
+        f"{ticker} - Actual vs Predicted Stock Price\n"
+        f"MAE=${metrics['MAE']:.2f}  |  "
+        f"RMSE=${metrics['RMSE']:.2f}  |  "
+        f"MAPE={metrics['MAPE (%)']:.2f}%",
         fontsize=12, fontweight="bold"
     )
     ax.set_xlabel("Date")
@@ -442,28 +450,86 @@ def plot_actual_vs_predicted(dates, actual, predicted, ticker, metrics):
     path = os.path.join(OUTPUT_DIR, f"{ticker}_actual_vs_predicted.png")
     plt.savefig(path, dpi=150)
     plt.close()
-    print(f"[PLOT]  Saved: {path}")
+    print(f"[PLOT]  Saved -> {path}")
 
 
 def plot_scatter(actual, predicted, ticker):
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.scatter(actual, predicted, alpha=0.4, s=10, color="#7B1FA2")
-    lim = [min(actual.min(), predicted.min()), max(actual.max(), predicted.max())]
+    lim = [min(actual.min(), predicted.min()),
+           max(actual.max(), predicted.max())]
     ax.plot(lim, lim, "r--", linewidth=2, label="Perfect prediction")
     ax.set_xlabel("Actual Price (USD)")
     ax.set_ylabel("Predicted Price (USD)")
-    ax.set_title(f"{ticker} - Scatter: Actual vs Predicted", fontsize=13, fontweight="bold")
+    ax.set_title(f"{ticker} - Scatter: Actual vs Predicted",
+                 fontsize=13, fontweight="bold")
     ax.legend()
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     path = os.path.join(OUTPUT_DIR, f"{ticker}_scatter.png")
     plt.savefig(path, dpi=150)
     plt.close()
-    print(f"[PLOT]  Saved: {path}")
+    print(f"[PLOT]  Saved -> {path}")
+
+
+def plot_technical_indicators(df_with_indicators, ticker):
+    """
+    Extra chart showing the technical indicators used for this company.
+    Helps visualize what the model learned from.
+    """
+    fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
+
+    # Plot 1: Price + Moving Averages
+    axes[0].plot(df_with_indicators.index, df_with_indicators["Close"],
+                 label="Close", color="#1565C0", linewidth=1)
+    axes[0].plot(df_with_indicators.index, df_with_indicators["MA7"],
+                 label="MA7",   color="#FF5722", linewidth=1, alpha=0.8)
+    axes[0].plot(df_with_indicators.index, df_with_indicators["MA21"],
+                 label="MA21",  color="#4CAF50", linewidth=1, alpha=0.8)
+    axes[0].plot(df_with_indicators.index, df_with_indicators["MA50"],
+                 label="MA50",  color="#9C27B0", linewidth=1, alpha=0.8)
+    axes[0].fill_between(df_with_indicators.index,
+                         df_with_indicators["BB_upper"],
+                         df_with_indicators["BB_lower"],
+                         alpha=0.1, color="gray", label="Bollinger Bands")
+    axes[0].set_title(f"{ticker} - Price & Moving Averages",
+                      fontweight="bold")
+    axes[0].set_ylabel("Price")
+    axes[0].legend(fontsize=8)
+    axes[0].grid(True, alpha=0.3)
+
+    # Plot 2: MACD
+    axes[1].plot(df_with_indicators.index, df_with_indicators["MACD"],
+                 color="#FF9800", linewidth=1.2, label="MACD")
+    axes[1].axhline(y=0, color="black", linewidth=0.8, linestyle="--")
+    axes[1].set_title(f"{ticker} - MACD", fontweight="bold")
+    axes[1].set_ylabel("MACD")
+    axes[1].legend(fontsize=8)
+    axes[1].grid(True, alpha=0.3)
+
+    # Plot 3: RSI
+    axes[2].plot(df_with_indicators.index, df_with_indicators["RSI"],
+                 color="#E91E63", linewidth=1.2, label="RSI")
+    axes[2].axhline(y=70, color="red",   linewidth=0.8,
+                    linestyle="--", label="Overbought (70)")
+    axes[2].axhline(y=30, color="green", linewidth=0.8,
+                    linestyle="--", label="Oversold (30)")
+    axes[2].set_ylim(0, 100)
+    axes[2].set_title(f"{ticker} - RSI", fontweight="bold")
+    axes[2].set_ylabel("RSI")
+    axes[2].legend(fontsize=8)
+    axes[2].grid(True, alpha=0.3)
+
+    plt.xticks(rotation=35)
+    plt.tight_layout()
+    path = os.path.join(OUTPUT_DIR, f"{ticker}_technical_indicators.png")
+    plt.savefig(path, dpi=150)
+    plt.close()
+    print(f"[PLOT]  Saved -> {path}")
 
 
 # =============================================================================
-#  SECTION 11 - MAIN PIPELINE
+#  STEP 13 - MAIN PIPELINE
 # =============================================================================
 def run_pipeline(cfg):
     ticker   = cfg["ticker"]
@@ -472,15 +538,26 @@ def run_pipeline(cfg):
 
     print(f"\n[CONFIG]  Ticker: {ticker}  |  Device: {device}")
 
+    # Download
     df = load_stock_data(ticker, cfg["start_date"], cfg["end_date"])
 
-    data_scaled, scaler, target_idx, dates = preprocess(df, cfg["target_col"])
-    num_features = data_scaled.shape[1]
+    # Add technical indicators (this is what makes each company unique)
+    df = add_technical_indicators(df)
 
-    X, y      = create_sequences(data_scaled, lookback, target_idx,
-                                  cfg["forecast_horizon"])
+    # Save the indicator chart
+    plot_technical_indicators(df, ticker)
+
+    # Preprocess
+    data_scaled, scaler, target_idx, dates, num_features = preprocess(
+        df, cfg["target_col"]
+    )
+
+    # Sequences
+    X, y      = create_sequences(data_scaled, lookback,
+                                   target_idx, cfg["forecast_horizon"])
     seq_dates = dates[lookback + cfg["forecast_horizon"] - 1:]
 
+    # Split
     split           = int(len(X) * cfg["train_ratio"])
     X_train, X_test = X[:split], X[split:]
     y_train, y_test = y[:split], y[split:]
@@ -490,65 +567,83 @@ def run_pipeline(cfg):
     X_tr, X_val  = X_train[:val_split], X_train[val_split:]
     y_tr, y_val  = y_train[:val_split], y_train[val_split:]
 
-    print(f"\n[SPLIT]  Train: {len(X_tr)}  |  Val: {len(X_val)}  |  Test: {len(X_test)}")
+    print(f"\n[SPLIT]  Train: {len(X_tr)}  |  "
+          f"Val: {len(X_val)}  |  Test: {len(X_test)}")
 
     train_loader = DataLoader(StockDataset(X_tr, y_tr),
                               batch_size=cfg["batch_size"], shuffle=True)
-    val_loader   = DataLoader(StockDataset(X_val, y_val), batch_size=cfg["batch_size"])
-    test_loader  = DataLoader(StockDataset(X_test, y_test), batch_size=cfg["batch_size"])
+    val_loader   = DataLoader(StockDataset(X_val, y_val),
+                              batch_size=cfg["batch_size"])
+    test_loader  = DataLoader(StockDataset(X_test, y_test),
+                              batch_size=cfg["batch_size"])
 
+    # Build model
     model = StockTransformer(
-        num_features=num_features,
-        d_model=cfg["d_model"],
-        nhead=cfg["nhead"],
-        num_layers=cfg["num_layers"],
-        dim_feedforward=cfg["dim_feedforward"],
-        dropout=cfg["dropout"],
-        seq_len=lookback
+        num_features    = num_features,
+        d_model         = cfg["d_model"],
+        nhead           = cfg["nhead"],
+        num_layers      = cfg["num_layers"],
+        dim_feedforward = cfg["dim_feedforward"],
+        dropout         = cfg["dropout"],
+        seq_len         = lookback
     )
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"\n[MODEL]  Trainable parameters: {params:,}")
+    print(f"\n[MODEL]  Trainable parameters: {params:,}  |  "
+          f"Features used: {num_features}")
 
-    train_losses, val_losses = train_model(model, train_loader, val_loader, cfg)
+    # Train
+    train_losses, val_losses = train_model(
+        model, train_loader, val_loader, cfg
+    )
 
+    # Predict
     preds_scaled, actuals_scaled = get_predictions(model, test_loader, device)
-    preds_real   = inverse_transform_target(preds_scaled,   scaler, target_idx, num_features)
-    actuals_real = inverse_transform_target(actuals_scaled, scaler, target_idx, num_features)
+    preds_real   = inverse_transform_target(
+        preds_scaled,   scaler, target_idx, num_features
+    )
+    actuals_real = inverse_transform_target(
+        actuals_scaled, scaler, target_idx, num_features
+    )
 
+    # Metrics
     metrics = evaluate_metrics(actuals_real, preds_real)
 
-    print("\n[VIZ]   Generating plots ...")
+    # Plots
+    print("\n[VIZ]   Saving charts ...")
     plot_loss_curves(train_losses, val_losses, ticker)
-    plot_actual_vs_predicted(dates_test[:len(preds_real)],
-                             actuals_real, preds_real, ticker, metrics)
+    plot_actual_vs_predicted(
+        dates_test[:len(preds_real)],
+        actuals_real, preds_real, ticker, metrics
+    )
     plot_scatter(actuals_real, preds_real, ticker)
 
-    weights_path = os.path.join(OUTPUT_DIR, f"{ticker}_transformer_weights.pth")
+    # Save model
+    weights_path = os.path.join(OUTPUT_DIR, f"{ticker}_weights.pth")
     torch.save(model.state_dict(), weights_path)
-    print(f"\n[SAVE]  Weights saved -> {weights_path}")
-
-    return metrics
+    print(f"\n[SAVE]  Model saved -> {weights_path}")
+    print("\n" + "=" * 60)
+    print(f"  DONE!  4 charts saved for {ticker}:")
+    print(f"  1. {ticker}_technical_indicators.png")
+    print(f"  2. {ticker}_loss_curves.png")
+    print(f"  3. {ticker}_actual_vs_predicted.png")
+    print(f"  4. {ticker}_scatter.png")
+    print("=" * 60)
 
 
 def main():
     while True:
-        # Ask user which company to predict
-        user_input = get_user_input()
-        cfg        = build_config(
-            user_input["ticker"],
-            user_input["start_date"],
-            user_input["end_date"]
-        )
+        ticker = get_ticker()
+        cfg    = build_config(ticker)
 
         try:
             run_pipeline(cfg)
         except ValueError as e:
             print(f"\n[ERROR]  {e}")
 
-        print("\n" + "=" * 60)
-        again = input("Run prediction for another company? (yes/no): ").strip().lower()
+        print()
+        again = input("Predict another company? (yes/no): ").strip().lower()
         if again not in ("yes", "y"):
-            print("\nThank you! Exiting.")
+            print("\nGoodbye!")
             break
 
 
